@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OutKastle - OutKast Song Guessing Game</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #2a0845 0%, #6441a5 100%);
+      color: #fff;
+      font-family: 'Arial Black', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 2em auto;
+      background: rgba(0,0,0,0.6);
+      border-radius: 12px;
+      padding: 2em;
+      box-shadow: 0 0 12px #222;
+    }
+    h1 {
+      text-align: center;
+      font-size: 3em;
+      margin-bottom: 0.2em;
+      letter-spacing: 2px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #ffd700;
+      margin-bottom: 1em;
+    }
+    .guess-row {
+      display: flex;
+      gap: 0.3em;
+      margin-bottom: 0.5em;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cell {
+      padding: 0.5em;
+      border-radius: 5px;
+      min-width: 160px;
+      text-align: center;
+      font-weight: bold;
+      background: #333;
+      color: #fff;
+      margin-bottom: 2px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .correct { background: #4caf50; }
+    .partial { background: #ffd700; color: #333; }
+    .incorrect { background: #444; color: #bbb; }
+    .arrow {
+      font-size: 1.2em;
+      margin-left: 8px;
+    }
+    #guessInput {
+      width: 60%;
+      padding: 0.7em;
+      font-size: 1em;
+      border-radius: 6px;
+      border: none;
+      margin-right: 0.5em;
+    }
+    #guessBtn {
+      padding: 0.7em 1.2em;
+      background: #ffd700;
+      color: #2a0845;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #message {
+      text-align: center;
+      font-size: 1.2em;
+      margin: 1em 0;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 2em;
+      color: #ffd700;
+    }
+    a {
+      color: #ffd700;
+      margin: 0 1em;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #2a0845;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      z-index: 1000;
+      text-align: center;
+      border: 3px solid #ffd700;
+    }
+    .modal h2 {
+      color: #ffd700;
+      margin-bottom: 1em;
+    }
+    .modal-button {
+      background: #ffd700;
+      color: #2a0845;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 1em;
+    }
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 999;
+    }
+    @media (max-width: 800px) {
+      .container { max-width: 98%; }
+      .cell { min-width: 90px; font-size: 0.9em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>OutKastle</h1>
+    <div class="subtitle">Guess the OutKast song! (8 guesses remaining)</div>
+    <form id="guessForm" autocomplete="off">
+      <input list="songs" id="guessInput" placeholder="Type song title..." required>
+      <datalist id="songs"></datalist>
+      <button type="submit" id="guessBtn">Guess</button>
+    </form>
+    <div id="message"></div>
+    <div id="guesses"></div>
+    <div class="footer">
+      <a href="index.html">Professional Pages</a>
+      <a href="outkast.html">OutKast</a>
+      <button onclick="resetGame()" style="margin-top:1em">Play Again</button>
+    </div>
+  </div>
+  <!-- Victory Modal -->
+  <div class="overlay" id="overlay"></div>
+  <div class="modal" id="victoryModal">
+    <h2>🎉 Congrats! Andre & Big Boi Luv U! 🎉</h2>
+    <p>You correctly guessed: <strong id="correctSong"></strong></p>
+    <button class="modal-button" onclick="hideModal()">Keep Playing!</button>
+  </div>
+  <script>
+    // FULL OutKast discography for 5 albums (from paste-3.txt)
+    const songs = [
+      // Southernplayalisticadillacmuzik (1994)
+      { title: "Peaches (Intro)", album: "Southernplayalisticadillacmuzik", track: 1, length: 51, year: 1994 },
+      { title: "Myintrotoletuknow", album: "Southernplayalisticadillacmuzik", track: 2, length: 160, year: 1994 },
+      { title: "Ain't No Thang", album: "Southernplayalisticadillacmuzik", track: 3, length: 339, year: 1994 },
+      { title: "Welcome to Atlanta (Interlude)", album: "Southernplayalisticadillacmuzik", track: 4, length: 58, year: 1994 },
+      { title: "Southernplayalisticadillacmuzik", album: "Southernplayalisticadillacmuzik", track: 5, length: 318, year: 1994 },
+      { title: "Call of da Wild", album: "Southernplayalisticadillacmuzik", track: 6, length: 366, year: 1994 },
+      { title: "Player's Ball", album: "Southernplayalisticadillacmuzik", track: 7, length: 261, year: 1994 },
+      { title: "Claimin' True", album: "Southernplayalisticadillacmuzik", track: 8, length: 283, year: 1994 },
+      { title: "Club Donkey Ass (Interlude)", album: "Southernplayalisticadillacmuzik", track: 9, length: 25, year: 1994 },
+      { title: "Funky Ride", album: "Southernplayalisticadillacmuzik", track: 10, length: 391, year: 1994 },
+      { title: "Flim Flam (Interlude)", album: "Southernplayalisticadillacmuzik", track: 11, length: 75, year: 1994 },
+      { title: "Git Up, Git Out", album: "Southernplayalisticadillacmuzik", track: 12, length: 447, year: 1994 },
+      { title: "True Dat (Interlude)", album: "Southernplayalisticadillacmuzik", track: 13, length: 76, year: 1994 },
+      { title: "Crumblin' Erb", album: "Southernplayalisticadillacmuzik", track: 14, length: 310, year: 1994 },
+      { title: "Hootie Hoo", album: "Southernplayalisticadillacmuzik", track: 15, length: 239, year: 1994 },
+      { title: "D.E.E.P.", album: "Southernplayalisticadillacmuzik", track: 16, length: 331, year: 1994 },
+      { title: "Player's Ball (Reprise)", album: "Southernplayalisticadillacmuzik", track: 17, length: 140, year: 1994 },
+      // ATLiens (1996)
+      { title: "You May Die (Intro)", album: "ATLiens", track: 1, length: 65, year: 1996 },
+      { title: "Two Dope Boyz (In a Cadillac)", album: "ATLiens", track: 2, length: 166, year: 1996 },
+      { title: "ATLiens", album: "ATLiens", track: 3, length: 230, year: 1996 },
+      { title: "Wheelz of Steel", album: "ATLiens", track: 4, length: 243, year: 1996 },
+      { title: "Jazzy Belle", album: "ATLiens", track: 5, length: 252, year: 1996 },
+      { title: "Elevators (Me & You)", album: "ATLiens", track: 6, length: 265, year: 1996 },
+      { title: "Ova da Wudz", album: "ATLiens", track: 7, length: 228, year: 1996 },
+      { title: "Babylon", album: "ATLiens", track: 8, length: 264, year: 1996 },
+      { title: "Wailin'", album: "ATLiens", track: 9, length: 120, year: 1996 },
+      { title: "Mainstream", album: "ATLiens", track: 10, length: 318, year: 1996 },
+      { title: "Decatur Psalm", album: "ATLiens", track: 11, length: 238, year: 1996 },
+      { title: "Millennium", album: "ATLiens", track: 12, length: 189, year: 1996 },
+      { title: "E.T. (Extraterrestrial)", album: "ATLiens", track: 13, length: 187, year: 1996 },
+      { title: "13th Floor / Growing Old", album: "ATLiens", track: 14, length: 410, year: 1996 },
+      { title: "Elevators (Me & You) [DNP 86 Remix]", album: "ATLiens", track: 15, length: 277, year: 1996 },
+      // Aquemini (1998)
+      { title: "Hold On, Be Strong", album: "Aquemini", track: 1, length: 71, year: 1998 },
+      { title: "Return of the 'G'", album: "Aquemini", track: 2, length: 289, year: 1998 },
+      { title: "Rosa Parks", album: "Aquemini", track: 3, length: 324, year: 1998 },
+      { title: "Skew It on the Bar-B", album: "Aquemini", track: 4, length: 195, year: 1998 },
+      { title: "Aquemini", album: "Aquemini", track: 5, length: 319, year: 1998 },
+      { title: "Synthesizer", album: "Aquemini", track: 6, length: 311, year: 1998 },
+      { title: "Slump", album: "Aquemini", track: 7, length: 309, year: 1998 },
+      { title: "West Savannah", album: "Aquemini", track: 8, length: 243, year: 1998 },
+      { title: "Da Art of Storytellin' (Pt. 1)", album: "Aquemini", track: 9, length: 223, year: 1998 },
+      { title: "Da Art of Storytellin' (Pt. 2)", album: "Aquemini", track: 10, length: 168, year: 1998 },
+      { title: "Mamacita", album: "Aquemini", track: 11, length: 352, year: 1998 },
+      { title: "SpottieOttieDopaliscious", album: "Aquemini", track: 12, length: 427, year: 1998 },
+      { title: "Y'all Scared", album: "Aquemini", track: 13, length: 290, year: 1998 },
+      { title: "Nathaniel", album: "Aquemini", track: 14, length: 70, year: 1998 },
+      { title: "Liberation", album: "Aquemini", track: 15, length: 526, year: 1998 },
+      { title: "Chonkyfire", album: "Aquemini", track: 16, length: 370, year: 1998 },
+      // Stankonia (2000)
+      { title: "Intro", album: "Stankonia", track: 1, length: 69, year: 2000 },
+      { title: "Gasoline Dreams", album: "Stankonia", track: 2, length: 214, year: 2000 },
+      { title: "I'm Cool (Interlude)", album: "Stankonia", track: 3, length: 42, year: 2000 },
+      { title: "So Fresh, So Clean", album: "Stankonia", track: 4, length: 240, year: 2000 },
+      { title: "Ms. Jackson", album: "Stankonia", track: 5, length: 270, year: 2000 },
+      { title: "Snappin' & Trappin'", album: "Stankonia", track: 6, length: 259, year: 2000 },
+      { title: "D.F. (Interlude)", album: "Stankonia", track: 7, length: 27, year: 2000 },
+      { title: "Spaghetti Junction", album: "Stankonia", track: 8, length: 237, year: 2000 },
+      { title: "Kim & Cookie (Interlude)", album: "Stankonia", track: 9, length: 72, year: 2000 },
+      { title: "I'll Call Before I Come", album: "Stankonia", track: 10, length: 258, year: 2000 },
+      { title: "B.O.B.", album: "Stankonia", track: 11, length: 304, year: 2000 },
+      { title: "Xplosion", album: "Stankonia", track: 12, length: 248, year: 2000 },
+      { title: "Good Hair (Interlude)", album: "Stankonia", track: 13, length: 14, year: 2000 },
+      { title: "We Luv Deez Hoez", album: "Stankonia", track: 14, length: 250, year: 2000 },
+      { title: "Humble Mumble", album: "Stankonia", track: 15, length: 290, year: 2000 },
+      { title: "Drinking Again (Interlude)", album: "Stankonia", track: 16, length: 24, year: 2000 },
+      { title: "?", album: "Stankonia", track: 17, length: 88, year: 2000 },
+      { title: "Red Velvet", album: "Stankonia", track: 18, length: 232, year: 2000 },
+      { title: "Cruisin' in the ATL (Interlude)", album: "Stankonia", track: 19, length: 19, year: 2000 },
+      { title: "Gangsta Sh*t", album: "Stankonia", track: 20, length: 281, year: 2000 },
+      { title: "Toilet Tisha", album: "Stankonia", track: 21, length: 264, year: 2000 },
+      { title: "Slum Beautiful", album: "Stankonia", track: 22, length: 247, year: 2000 },
+      { title: "Pre-Nump (Interlude)", album: "Stankonia", track: 23, length: 27, year: 2000 },
+      { title: "Stankonia (Stanklove)", album: "Stankonia", track: 24, length: 411, year: 2000 },
+      // Speakerboxxx/The Love Below (2003)
+      { title: "Intro", album: "Speakerboxxx/The Love Below", track: 1, length: 60, year: 2003 },
+      { title: "GhettoMusick", album: "Speakerboxxx/The Love Below", track: 2, length: 236, year: 2003 },
+      { title: "Unhappy", album: "Speakerboxxx/The Love Below", track: 3, length: 240, year: 2003 },
+      { title: "Bowtie", album: "Speakerboxxx/The Love Below", track: 4, length: 210, year: 2003 },
+      { title: "The Way You Move", album: "Speakerboxxx/The Love Below", track: 5, length: 234, year: 2003 },
+      { title: "The Rooster", album: "Speakerboxxx/The Love Below", track: 6, length: 210, year: 2003 },
+      { title: "Bust", album: "Speakerboxxx/The Love Below", track: 7, length: 200, year: 2003 },
+      { title: "War", album: "Speakerboxxx/The Love Below", track: 8, length: 220, year: 2003 },
+      { title: "Church", album: "Speakerboxxx/The Love Below", track: 9, length: 230, year: 2003 },
+      { title: "Bamboo (Interlude)", album: "Speakerboxxx/The Love Below", track: 10, length: 75, year: 2003 },
+      { title: "Tomb of the Boom", album: "Speakerboxxx/The Love Below", track: 11, length: 230, year: 2003 },
+      { title: "E-Mac (Interlude)", album: "Speakerboxxx/The Love Below", track: 12, length: 60, year: 2003 },
+      { title: "Knowing", album: "Speakerboxxx/The Love Below", track: 13, length: 220, year: 2003 },
+      { title: "Flip Flop Rock", album: "Speakerboxxx/The Love Below", track: 14, length: 210, year: 2003 },
+      { title: "Interlude", album: "Speakerboxxx/The Love Below", track: 15, length: 75, year: 2003 },
+      { title: "Reset", album: "Speakerboxxx/The Love Below", track: 16, length: 230, year: 2003 },
+      { title: "D-Boi (Interlude)", album: "Speakerboxxx/The Love Below", track: 17, length: 60, year: 2003 },
+      { title: "Last Call", album: "Speakerboxxx/The Love Below", track: 18, length: 220, year: 2003 },
+      { title: "Bowtie (Postlude)", album: "Speakerboxxx/The Love Below", track: 19, length: 60, year: 2003 },
+      { title: "The Love Below (Intro)", album: "Speakerboxxx/The Love Below", track: 20, length: 60, year: 2003 },
+      { title: "Love Hater", album: "Speakerboxxx/The Love Below", track: 21, length: 220, year: 2003 },
+      { title: "God (Interlude)", album: "Speakerboxxx/The Love Below", track: 22, length: 60, year: 2003 },
+      { title: "Happy Valentine's Day", album: "Speakerboxxx/The Love Below", track: 23, length: 220, year: 2003 },
+      { title: "Spread", album: "Speakerboxxx/The Love Below", track: 24, length: 220, year: 2003 },
+      { title: "Where Are My Panties?", album: "Speakerboxxx/The Love Below", track: 25, length: 220, year: 2003 },
+      { title: "Prototype", album: "Speakerboxxx/The Love Below", track: 26, length: 220, year: 2003 },
+      { title: "She Lives In My Lap", album: "Speakerboxxx/The Love Below", track: 27, length: 220, year: 2003 },
+      { title: "Hey Ya!", album: "Speakerboxxx/The Love Below", track: 28, length: 235, year: 2003 },
+      { title: "Roses", album: "Speakerboxxx/The Love Below", track: 29, length: 369, year: 2003 },
+      { title: "Good Day, Good Sir", album: "Speakerboxxx/The Love Below", track: 30, length: 220, year: 2003 },
+      { title: "Behold a Lady", album: "Speakerboxxx/The Love Below", track: 31, length: 220, year: 2003 },
+      { title: "Pink & Blue", album: "Speakerboxxx/The Love Below", track: 32, length: 220, year: 2003 },
+      { title: "Love in War", album: "Speakerboxxx/The Love Below", track: 33, length: 220, year: 2003 },
+      { title: "She's Alive", album: "Speakerboxxx/The Love Below", track: 34, length: 220, year: 2003 },
+      { title: "Dracula's Wedding", album: "Speakerboxxx/The Love Below", track: 35, length: 220, year: 2003 },
+      { title: "Take Off Your Cool", album: "Speakerboxxx/The Love Below", track: 36, length: 220, year: 2003 },
+      { title: "Vibrate", album: "Speakerboxxx/The Love Below", track: 37, length: 220, year: 2003 },
+      { title: "A Life in the Day of Benjamin André (Incomplete)", album: "Speakerboxxx/The Love Below", track: 38, length: 220, year: 2003 }
+    ];
+
+    let answer, maxGuesses = 8, guesses = [];
+
+    function initializeGame() {
+      answer = songs[Math.floor(Math.random() * songs.length)];
+      guesses = [];
+      document.getElementById('guesses').innerHTML = '';
+      document.getElementById('guessBtn').disabled = false;
+      document.getElementById('guessInput').disabled = false;
+      document.getElementById('message').textContent = '';
+      document.querySelector('.subtitle').textContent =
+        `Guess the OutKast song! No Idlewild! (${maxGuesses - guesses.length} guesses remaining)`;
+    }
+
+    function compareAlbums(guessYear, guessAlbum) {
+      if (guessYear === answer.year) return { status: 'correct', value: guessAlbum, arrow: '' };
+      const diff = guessYear - answer.year;
+      return {
+        status: Math.abs(diff) <= 1 ? 'partial' : 'incorrect',
+        value: guessAlbum,
+        arrow: diff < 0 ? '↑' : '↓'
+      };
+    }
+
+    function compareTracks(guessTrack) {
+      if (guessTrack === answer.track) return { status: 'correct', value: guessTrack, arrow: '' };
+      const diff = guessTrack - answer.track;
+      return {
+        status: Math.abs(diff) <= 2 ? 'partial' : 'incorrect',
+        value: guessTrack,
+        arrow: diff < 0 ? '↑' : '↓'
+      };
+    }
+
+    function compareLength(guessLength) {
+      if (guessLength === answer.length) return { status: 'correct', value: guessLength, arrow: '' };
+      const diff = guessLength - answer.length;
+      return {
+        status: Math.abs(diff) <= 30 ? 'partial' : 'incorrect',
+        value: guessLength,
+        arrow: diff < 0 ? '↑' : '↓'
+      };
+    }
+
+    function checkGuess(guessTitle) {
+      const guessedSong = songs.find(s => s.title.toLowerCase() === guessTitle.toLowerCase());
+      if (!guessedSong) return { error: "Song not found!" };
+
+      return {
+        title: guessedSong.title,
+        album: compareAlbums(guessedSong.year, guessedSong.album),
+        track: compareTracks(guessedSong.track),
+        length: compareLength(guessedSong.length)
+      };
+    }
+
+    function renderGuesses() {
+      const guessesDiv = document.getElementById('guesses');
+      guessesDiv.innerHTML = '';
+      guesses.forEach(g => {
+        const row = document.createElement('div');
+        row.className = 'guess-row';
+        row.innerHTML = `
+          <div class="cell ${g.title === answer.title ? 'correct' : 'incorrect'}">
+            ${g.title}
+          </div>
+          <div class="cell ${g.album.status}">
+            ${g.album.value}
+            ${g.album.status !== 'correct' ? `<span class="arrow">${g.album.arrow}</span>` : ''}
+          </div>
+          <div class="cell ${g.track.status}">
+            ${g.track.value}
+            ${g.track.status !== 'correct' ? `<span class="arrow">${g.track.arrow}</span>` : ''}
+          </div>
+          <div class="cell ${g.length.status}">
+            ${Math.floor(g.length.value/60)}:${(g.length.value%60).toString().padStart(2,'0')}
+            ${g.length.status !== 'correct' ? `<span class="arrow">${g.length.arrow}</span>` : ''}
+          </div>
+        `;
+        guessesDiv.appendChild(row);
+      });
+    }
+
+    // Hide initial datalist dropdown, only show on typing
+    const guessInput = document.getElementById('guessInput');
+    guessInput.addEventListener('focus', () => {
+      guessInput.removeAttribute('list');
+    });
+    guessInput.addEventListener('input', () => {
+      guessInput.setAttribute('list', 'songs');
+    });
+
+    document.getElementById('guessForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const guess = guessInput.value.trim();
+      const message = document.getElementById('message');
+      if (!guess) return;
+      const result = checkGuess(guess);
+      if (result.error) {
+        message.textContent = result.error;
+        return;
+      }
+      guesses.push(result);
+      renderGuesses();
+      guessInput.value = '';
+      document.querySelector('.subtitle').textContent =
+        `Guess the OutKast song! (${maxGuesses - guesses.length} guesses remaining)`;
+      if (result.title === answer.title) {
+        showModal(answer.title);
+        endGame();
+      } else if (guesses.length >= maxGuesses) {
+        message.innerHTML = `<span style="color:#ffd700">Game Over! Answer: ${answer.title}</span>`;
+        endGame();
+      }
+    });
+
+    function endGame() {
+      document.getElementById('guessBtn').disabled = true;
+      document.getElementById('guessInput').disabled = true;
+    }
+
+    function resetGame() {
+      hideModal();
+      initializeGame();
+    }
+
+    // Modal controls
+    function showModal(songTitle) {
+      document.getElementById('overlay').style.display = 'block';
+      document.getElementById('victoryModal').style.display = 'block';
+      document.getElementById('correctSong').textContent = songTitle;
+    }
+    function hideModal() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('victoryModal').style.display = 'none';
+    }
+
+    // Initial setup
+    const datalist = document.getElementById('songs');
+    songs.forEach(song => {
+      const option = document.createElement('option');
+      option.value = song.title;
+      datalist.appendChild(option);
+    });
+
+    initializeGame();
+  </script>
+</body>
+</html>
